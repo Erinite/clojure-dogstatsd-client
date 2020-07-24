@@ -66,35 +66,35 @@
   - `sample-rate` A float between 0 and 1. Sets the rate of requests to sample.
   - `tags` vector of additional tags to add to the metrics
   "
-  ([handler]
-   (wrap-http-metrics handler nil))
-  ([handler {:keys [sample-rate tags loggable?] :as options}]
+  ([client handler]
+   (wrap-http-metrics client handler nil))
+  ([client handler {:keys [sample-rate tags loggable?] :as options}]
    (let [loggable? (or loggable? (complement healthcheck-request?))]
      (fn
        ([request]
         (if-not (loggable? request)
           (handler request)
           (let [start (System/currentTimeMillis)]
-            (statsd/increment "http.count" options)
+            (statsd/increment! client "http.count" options)
             (try
               (let [response (handler request)]
-                (statsd/increment (status-code-metric (:status response)) options)
+                (statsd/increment! client (status-code-metric (:status response)) options)
                 response)
               (catch Exception ex
-                (statsd/increment "http.exception" options)
+                (statsd/increment! client "http.exception" options)
                 (throw ex))
               (finally
                 (let [elapsed (- (System/currentTimeMillis) start)]
-                  (statsd/histogram "http.duration" elapsed options)))))))
+                  (statsd/histogram! client "http.duration" elapsed options)))))))
 
-       ([request respond raise]
+       ([client request respond raise]
         (if-not (loggable? request)
           (let [start (System/currentTimeMillis)]
-            (statsd/increment "http.count" options)
+            (statsd/increment! client "http.count" options)
             (handler request
-                     #(do (statsd/increment (status-code-metric (:status %)) options)
+                     #(do (statsd/increment! client (status-code-metric (:status %)) options)
                           (respond %)
                           (let [elapsed (- (System/currentTimeMillis) start)]
-                            (statsd/histogram "http.duration" elapsed options)))
-                     #(do (statsd/increment "http.exception" options)
+                            (statsd/histogram! client "http.duration" elapsed options)))
+                     #(do (statsd/increment! client "http.exception" options)
                           (raise %))))))))))

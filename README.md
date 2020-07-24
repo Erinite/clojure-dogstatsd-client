@@ -1,6 +1,23 @@
 # clojure-statsd-client
 
-[![Clojars Project](https://img.shields.io/clojars/v/com.unbounce/clojure-dogstatsd-client.svg)](https://clojars.org/com.unbounce/clojure-dogstatsd-client) [![CircleCI](https://circleci.com/gh/unbounce/clojure-dogstatsd-client/tree/master.svg?style=svg)](https://circleci.com/gh/unbounce/clojure-dogstatsd-client/tree/master)
+![Clojars Project](https://img.shields.io/clojars/v/erinite/clojure-dogstatsd-client.svg)
+
+---
+
+**Fork of [unbounce/clojure-dogstatsd-client](https://github.com/unbounce/clojure-dogstatsd-client) with some cosmetic changes:**
+
+ * `erinite/clojure-dogstatsd-client` appends a `!` to all of the functions, eg `increment!` vs `increment` in `unbounce/clojure-dogstatsd-client`
+ * `erinite/clojure-dogstatsd-client` does not keep global state, taking the client as first argument  eg `(increment! client "counter")` vs `(increment "counter")` in `unbounce/clojure-dogstatsd-client`
+ * `erinite/clojure-dogstatsd-client` uses `init!` to create and return a client object, `unbounce/clojure-dogstatsd-client` uses `setup!` to setup a global client object
+ * `erinite/clojure-dogstatsd-client` passes config as maps to `init!` (`(init! {:host "foo"})`), `unbounce/clojure-dogstatsd-client` uses pairs of arguments (`(setup! :host "foo")`
+ * `erinite/clojure-dogstatsd-client` uses `halt!` to stop a passed in client object, `unbounce/clojure-dogstatsd-client` uses `shutdown!` to stop a global client object
+ * `erinite/clojure-dogstatsd-client` uses `(timed! client ...)` to time some code, `unbounce/clojure-dogstatsd-client` uses `(time! ...)`
+ * To create a no-op client, call `init!` without arguments: `(init!)`
+ * The only function whose name was left unchanged is `wrap-http-metrics` (which now takes a client as first argument), otherwise the names don't clash and this fork could easily provide compatible wrapper functions
+
+Special Thanks to Unbounce Marketing Solutions Inc. for creating clojure-dogstatsd-client!
+
+---
 
 A thin veneer over the officia Java dogstatsd
 [client](https://github.com/DataDog/java-dogstatsd-client). This library favours
@@ -12,6 +29,10 @@ application doesn't need to know about it.
 
 ## Usage
 
+```
+[erinite/clojure-dogstatsd-client "0.6.3"]
+```
+
 Somewhere in your code, you should setup the client:
 
 ``` clojure
@@ -20,30 +41,30 @@ Somewhere in your code, you should setup the client:
 ;; Do this once in your code
 ;; Or statd calls will default to use NoOpStatsDClient to avoid nullpointer exception
 ;; You can also configure the host/port by setting the environment variables: DD_AGENT_HOST and DD_DOGSTATSD_PORT
-(statsd/setup! :host "127.0.0.1" :port 8125 :prefix "my.app")
+(let [client (statsd/init! {:host "127.0.0.1" :port 8125 :prefix "my.app"})]
 
-;; Increment or decrement a counter
-(statsd/increment "counter")           ; increment by 1
-(statsd/increment "counter" {:by 2.5}) ; increment by 2.5
-(statsd/decrement "another.counter")   ; decrement by 1
+  ;; Increment or decrement a counter
+  (statsd/increment! client "counter")           ; increment by 1
+  (statsd/increment! client "counter" {:by 2.5}) ; increment by 2.5
+  (statsd/decrement! client "another.counter")   ; decrement by 1
 
-;; Records a value at given time
-(statsd/gauge "a.gauge" 10)
+  ;; Records a value at given time
+  (statsd/gauge! client "a.gauge" 10)
 
-;; Record a histogram value (i.e for measuring percentiles)
-(statsd/histogram "a.histogram" 10)
+  ;; Record a histogram value (i.e for measuring percentiles)
+  (statsd/histogram! client "a.histogram" 10)
 
-;; Time how long body takes and records it to the metric
-(statsd/time! ["a.timed.body" {}]
-  (Thread/sleep 100)
-  (Thread/sleep 100))
+  ;; Time how long body takes and records it to the metric
+  (statsd/timed! client ["a.timed.body" {}]
+    (Thread/sleep 100)
+    (Thread/sleep 100))
 
-;; Time how long it takes with a tag/sample-rate
-(statsd/time! ["my.metric.with.tags" {:tags #{"foo"} :sample-rate 0.3}}]
-  (Thread/sleep 1000))
+  ;; Time how long it takes with a tag/sample-rate
+  (statsd/timed! client ["my.metric.with.tags" {:tags #{"foo"} :sample-rate 0.3}}]
+    (Thread/sleep 1000))
 
-;; Shutdown client to ensure all messages are emitted to statsd and resources are cleaned up
-(statsd/shutdown!)
+  ;; Shutdown client to ensure all messages are emitted to statsd and resources are cleaned up
+  (statsd/halt! client))
 ```
 
 ### Ring Middleware
@@ -66,15 +87,15 @@ Usage:
 
 ```
 (require '[com.unbounce.dogstatsd.ring :as dogstatsd.ring])
+(require '[com.unbounce.dogstatsd.core :refer [init!]])
 
-;; by default instrument all requests
-(def handler (-> (constantly {:status 200})
-                 (dogstatsd.ring/wrap-http-metrics)))
+(let [client (init! {:host "127.0.0.1" :port 8125})]
+  ;; by default instrument all requests
+  (def handler (->> (constantly {:status 200})
+                  (dogstatsd.ring/wrap-http-metrics client)))
 
-;; when sample-rate is set, only 20% of requests will be instrumented
-(def handler (-> (constantly {:status 200})
-                 (dogstatsd.ring/wrap-http-metrics {:sample-rate 0.2})))
-
+  ;; when sample-rate is set, only 20% of requests will be instrumented
+  (def handler (dogstatsd.ring/wrap-http-metrics client (constantly {:status 200}) {:sample-rate 0.2})))
 ```
 
 

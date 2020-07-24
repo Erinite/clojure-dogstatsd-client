@@ -15,11 +15,12 @@
 (deftest wrap-http-metrics
   (let [response (atom nil)
         metrics  (atom {})
-        handler  (sut/wrap-http-metrics (fn [_] @response))]
-    (with-redefs [dogstatsd.core/increment (fn [metric & opts]
-                                             (swap! metrics assoc metric 1))
-                  dogstatsd.core/histogram (fn [metric value & opts]
-                                             (swap! metrics assoc metric value))]
+        client (dogstatsd.core/init!)
+        handler  (sut/wrap-http-metrics client (fn [_] @response))]
+    (with-redefs [dogstatsd.core/increment! (fn [client metric & opts]
+                                                     (swap! metrics assoc metric 1))
+                  dogstatsd.core/histogram! (fn [client metric value & opts]
+                                                     (swap! metrics assoc metric value))]
       (testing "on 2xx response"
         (reset! response {:status 201})
         (is (= {:status 201} (handler {:method :get})))
@@ -56,7 +57,7 @@
 
       (testing "captures exception metrics"
         (reset! metrics {})
-        (let [handler (sut/wrap-http-metrics (fn [_] (throw (ex-info "Derp!" {}))))]
+        (let [handler (sut/wrap-http-metrics client (fn [_] (throw (ex-info "Derp!" {}))))]
           (try (handler {:method :get})
                (catch Exception ex ))
           (is (= #{"http.count" "http.duration" "http.exception"}
