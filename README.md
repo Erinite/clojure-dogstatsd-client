@@ -15,6 +15,8 @@
  * To create a no-op client, call `init!` without arguments: `(init!)`
  * The only function whose name was left unchanged is `wrap-http-metrics` (which now takes a client as first argument), otherwise the names don't clash and this fork could easily provide compatible wrapper functions
 
+The original states that you shouldn't have to thread a client object around, but personally I much prefer that style. I like dependencies and state to be explicit, managed by a system like Integrant or Component.
+
 Special Thanks to Unbounce Marketing Solutions Inc. for creating clojure-dogstatsd-client!
 
 ---
@@ -22,10 +24,6 @@ Special Thanks to Unbounce Marketing Solutions Inc. for creating clojure-dogstat
 A thin veneer over the officia Java dogstatsd
 [client](https://github.com/DataDog/java-dogstatsd-client). This library favours
 pragmatism where possible.
-
-Instrumenting your code should be easy, you shouldn't be forced to thread a
-statsd client in your code. This library keeps a global client around so your
-application doesn't need to know about it.
 
 ## Usage
 
