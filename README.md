@@ -9,7 +9,7 @@
  * `erinite/clojure-dogstatsd-client` appends a `!` to all of the functions, eg `increment!` vs `increment` in `unbounce/clojure-dogstatsd-client`
  * `erinite/clojure-dogstatsd-client` does not keep global state, taking the client as first argument  eg `(increment! client "counter")` vs `(increment "counter")` in `unbounce/clojure-dogstatsd-client`
  * `erinite/clojure-dogstatsd-client` uses `init!` to create and return a client object, `unbounce/clojure-dogstatsd-client` uses `setup!` to setup a global client object
- * `erinite/clojure-dogstatsd-client` passes config as maps to `init!` (`(init! {:host "foo"})`), `unbounce/clojure-dogstatsd-client` uses pairs of arguments (`(setup! :host "foo")`
+ * `erinite/clojure-dogstatsd-client` passes config as maps to `init!`: `(init! {:host "foo"})`, `unbounce/clojure-dogstatsd-client` uses pairs of arguments: `(setup! :host "foo")`
  * `erinite/clojure-dogstatsd-client` uses `halt!` to stop a passed in client object, `unbounce/clojure-dogstatsd-client` uses `shutdown!` to stop a global client object
  * `erinite/clojure-dogstatsd-client` uses `(timed! client ...)` to time some code, `unbounce/clojure-dogstatsd-client` uses `(time! ...)`
  * To create a no-op client, call `init!` without arguments: `(init!)`
